@@ -1,0 +1,12 @@
+FROM ./models/icd-coder-q8_0.gguf
+
+TEMPLATE """{{- range .Messages }}<|im_start|>{{ .Role }}
+{{ .Content }}<|im_end|>
+{{ end }}<|im_start|>assistant
+"""
+
+SYSTEM """You are a certified medical coder. Read the clinical case and list its ICD-10-CM codes. Return ONLY a JSON list of codes, for example: ["I10", "R52"]"""
+
+PARAMETER temperature 0
+PARAMETER num_ctx 4096
+PARAMETER stop "<|im_end|>"

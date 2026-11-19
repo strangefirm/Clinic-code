@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn>=0.29
+streamlit>=1.40
+pandas>=2.0
+requests>=2.31
+pydantic>=2.0
+simple-icd-10-cm>=1.5

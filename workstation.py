@@ -8,7 +8,6 @@ import streamlit as st
 from app.rules import check_codes
 
 API_URL = os.environ.get("CODER_API_URL", "http://localhost:8001")
-HEADERS = {"X-API-Key": os.environ.get("CODER_API_KEY", "")}
 
 DEMO_CASES = {
     "CASE-001 · Diabetes, hypertension, cough": (
@@ -37,7 +36,7 @@ with st.sidebar:
         st.error(f"AI service offline ({API_URL}). Start the API and Ollama.")
     st.subheader("Recent approvals")
     try:
-        for rv in requests.get(f"{API_URL}/reviews", params={"limit": 5}, headers=HEADERS, timeout=5).json():
+        for rv in requests.get(f"{API_URL}/reviews", params={"limit": 5}, timeout=5).json():
             st.caption(f"#{rv['id']} · {rv['case_id']} · {rv['coder']} · "
                        f"-{len(rv['removed_by_coder'])} +{len(rv['added_by_coder'])}")
     except Exception:
@@ -62,7 +61,7 @@ state = st.session_state.setdefault("cases", {})
 if st.button("🤖 Get AI suggestions", type="primary", disabled=len(note.strip()) < 20):
     with st.spinner("The model is reading the note..."):
         try:
-            r = requests.post(f"{API_URL}/suggest", json={"text": note, "case_id": case_id}, headers=HEADERS, timeout=300)
+            r = requests.post(f"{API_URL}/suggest", json={"text": note, "case_id": case_id}, timeout=300)
             r.raise_for_status()
             state[case_id] = {"ai": r.json(), "added": [], "shown_at": time.time()}
         except Exception as e:
@@ -135,7 +134,7 @@ if case:
                     "review_seconds": round(time.time() - case["shown_at"], 1),
                 }
                 try:
-                    r = requests.post(f"{API_URL}/reviews", json=record, headers=HEADERS, timeout=10)
+                    r = requests.post(f"{API_URL}/reviews", json=record, timeout=10)
                     r.raise_for_status()
                     record["review_id"] = r.json()["review_id"]
                     case["approved"] = record
@@ -147,7 +146,7 @@ if case:
                            f"(reviewed in {rec['review_seconds']} s)")
                 if not rec["removed_by_coder"] and not rec["added_by_coder"] and rec["review_seconds"] < 10:
                     st.warning("Approved without changes in under 10 seconds. Was every code checked?")
-                xml = requests.get(f"{API_URL}/reviews/{rec['review_id']}/claim.xml", headers=HEADERS, timeout=10)
+                xml = requests.get(f"{API_URL}/reviews/{rec['review_id']}/claim.xml", timeout=10)
                 if xml.ok:
                     st.download_button("📄 Download claim XML", xml.content,
                                        file_name=f"claim_{rec['case_id']}_{rec['review_id']}.xml",

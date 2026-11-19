@@ -10,18 +10,15 @@ from app.claims import scrub
 from app.rules import describe
 
 API_URL = os.environ.get("CODER_API_URL", "http://localhost:8001")
-HEADERS = {"X-API-Key": os.environ.get("CODER_API_KEY", "")}
 
 st.set_page_config(page_title="Coding Dashboard", page_icon="📊", layout="wide")
 st.title("📊 AI Coding Performance Dashboard")
 st.caption("Computed live from the audit trail. Demo data only.")
 
 try:
-    resp = requests.get(f"{API_URL}/reviews", params={"limit": 10000}, headers=HEADERS, timeout=10)
-    resp.raise_for_status()
-    reviews = resp.json()
+    reviews = requests.get(f"{API_URL}/reviews", params={"limit": 10000}, timeout=10).json()
 except Exception:
-    st.error(f"Cannot reach the API at {API_URL} (or the API key is wrong). Start it first and set CODER_API_KEY.")
+    st.error(f"Cannot reach the API at {API_URL}. Start it first.")
     st.stop()
 
 if not reviews:

@@ -1,12 +1,9 @@
 """REST API: lets other software (hospital systems, the coder workstation) request code suggestions
 and record approved coding decisions."""
 import logging
-import os
-import secrets
 import uuid
 from contextlib import asynccontextmanager
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
-from fastapi.security import APIKeyHeader
+from fastapi import FastAPI, HTTPException, Query, Response
 
 from pydantic import BaseModel, Field
 
@@ -15,18 +12,6 @@ from app.engine import MODEL_VERSION, CodingEngine
 
 log = logging.getLogger(__name__)
 engine = None
-
-_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-def require_api_key(key: str | None = Depends(_api_key_header)):
-    """Shared-secret auth. Fails closed: if CODER_API_KEY is not set, every protected call is refused."""
-    expected = os.environ.get("CODER_API_KEY")
-    if not expected:
-        log.error("CODER_API_KEY is not set; refusing protected requests")
-        raise HTTPException(status_code=503, detail="Server authentication is not configured")
-    if not key or not secrets.compare_digest(key.encode(), expected.encode()):
-        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 @asynccontextmanager
@@ -77,7 +62,7 @@ def health():
     return {"status": "ok", "model": engine.model, "model_version": MODEL_VERSION}
 
 
-@app.post("/suggest", dependencies=[Depends(require_api_key)])
+@app.post("/suggest")
 def suggest(case: CaseIn):
     """Return suggested codes: accepted, flagged for review, and rejected (with reasons)."""
     try:
@@ -88,7 +73,7 @@ def suggest(case: CaseIn):
     return {"case_id": case.case_id or str(uuid.uuid4()), **result}
 
 
-@app.post("/reviews", dependencies=[Depends(require_api_key)])
+@app.post("/reviews")
 def create_review(review: ReviewIn):
     """Store an approved coding decision in the audit trail."""
     if sum(d.type == "Principal" for d in review.diagnoses) != 1:
@@ -96,14 +81,14 @@ def create_review(review: ReviewIn):
     return {"review_id": audit.save_review(review.model_dump())}
 
 
-@app.get("/reviews", dependencies=[Depends(require_api_key)])
+@app.get("/reviews")
 def get_reviews(limit: int = Query(50, ge=1, le=10000)):
     """Most recent approved reviews (newest first)."""
     return audit.list_reviews(limit)
 
 
 
-@app.get("/reviews/{review_id}/claim.xml", dependencies=[Depends(require_api_key)])
+@app.get("/reviews/{review_id}/claim.xml")
 def export_claim(review_id: int):
     """Scrub an approved review and export it as a claim-style XML file (demo format)."""
     review = audit.get_review(review_id)

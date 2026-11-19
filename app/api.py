@@ -1,14 +1,16 @@
 """REST API: lets other software (hospital systems, the coder workstation) request code suggestions
 and record approved coding decisions."""
+import logging
 import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Query, Response
 
 from pydantic import BaseModel, Field
 
 from app import audit, claims
 from app.engine import MODEL_VERSION, CodingEngine
 
+log = logging.getLogger(__name__)
 engine = None
 
 
@@ -28,9 +30,12 @@ app = FastAPI(
 )
 
 
+CASE_ID_PATTERN = r"^[A-Za-z0-9_-]+$"
+
+
 class CaseIn(BaseModel):
     text: str = Field(..., min_length=20, max_length=20000, description="Clinical note in English")
-    case_id: str | None = Field(None, description="Your own reference for this case (optional)")
+    case_id: str | None = Field(None, pattern=CASE_ID_PATTERN, max_length=64, description="Your own reference for this case (optional)")
 
 
 class Diagnosis(BaseModel):
@@ -39,7 +44,7 @@ class Diagnosis(BaseModel):
 
 
 class ReviewIn(BaseModel):
-    case_id: str
+    case_id: str = Field(..., pattern=CASE_ID_PATTERN, max_length=64)
     coder: str = Field(..., min_length=1)
     model_version: str
     note_text: str
@@ -62,8 +67,9 @@ def suggest(case: CaseIn):
     """Return suggested codes: accepted, flagged for review, and rejected (with reasons)."""
     try:
         result = engine.suggest(case.text)
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Coding engine error: {e}")
+    except Exception:
+        log.exception("Coding engine error")
+        raise HTTPException(status_code=503, detail="Coding engine unavailable")
     return {"case_id": case.case_id or str(uuid.uuid4()), **result}
 
 
@@ -76,7 +82,7 @@ def create_review(review: ReviewIn):
 
 
 @app.get("/reviews")
-def get_reviews(limit: int = 50):
+def get_reviews(limit: int = Query(50, ge=1, le=10000)):
     """Most recent approved reviews (newest first)."""
     return audit.list_reviews(limit)
 

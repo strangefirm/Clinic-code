@@ -17,3 +17,6 @@ models/
 
 # Secrets
 .env
+
+# Adapter weights exceed GitHub 100MB limit
+adapter/*.safetensors

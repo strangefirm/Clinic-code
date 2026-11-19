@@ -12,6 +12,17 @@ suggests codes, rule checks validate them, a coder approves, and every decision 
 - `workstation.py`: Streamlit coder workstation
 - `dashboard.py`: Streamlit performance dashboard
 
+## Screenshots (real model output, demo case CASE-001)
+
+**1. AI suggestions with rule checks**: accepted codes, a flagged code, and the final-coding panel.
+![AI suggestions](docs/screenshots/1-suggestions.png)
+
+**2. Coder approval saved to the audit trail**
+![Approved](docs/screenshots/2-approved.png)
+
+**3. Performance dashboard**
+![Dashboard](docs/screenshots/3-dashboard.png)
+
 ## Setup
 ```
 python -m venv .venv

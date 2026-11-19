@@ -20,3 +20,6 @@ models/
 
 # Adapter weights exceed GitHub 100MB limit
 adapter/*.safetensors
+
+# Browser-tool leftovers
+.playwright-mcp/
